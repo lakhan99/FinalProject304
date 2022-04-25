@@ -199,7 +199,9 @@ In this report, from data collected from individuals living in Peru, Mexico and 
 
 "add more when more graphs"
 
-Section 2 of this paper talks more about where and how the data was collected and if any modifications were made to this data set for the purpose of this study. This includes the construction of new variables such as "BMI" and removal of other variables. In section 3 of this paper, we will make a linear model of our data and discuss the results of our study. Section 4 talks about the limitations of this study using a measure like BMI and possible ethical concerns the reader consider before making any sort of decision.    
+Section 2 of this paper talks more about where and how the data was collected and if any modifications were made to this data set for the purpose of this study. This includes the construction of new variables such as "BMI" and removal of other variables. In section 3 of this paper, we will make a linear model of our data and discuss the results of our study. Section 4 talks about the limitations of this study using a measure like BMI and possible ethical concerns the reader consider before making any sort of decision.  
+
+Changes so I can upload 
 
 
 
