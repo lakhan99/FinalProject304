@@ -22,6 +22,8 @@ library(readr)
 library(bookdown)
 library(car)
 library(dplyr)
+library(knitr)
+library(kableExtra)
 ObesityDataSet_raw_and_data_sinthetic <- read_csv("~/starter_folder-main/inputs/data/ObesityDataSet_raw_and_data_sinthetic_final.csv")
 obesity_data <- ObesityDataSet_raw_and_data_sinthetic
 
@@ -34,30 +36,44 @@ obesity_data$new_SCC <- as.numeric(as.character(factor(obesity_data$SCC,
 obesity_data$new_history <- as.numeric(as.character(factor(obesity_data$family_history_with_overweight,
                                                         levels = c('yes', 'no'), labels = c(1,0))))
 
-obesity_data$new_CAEC <- as.numeric(as.character(factor(obesity_data$CAEC,
-                                                        levels = c('Always', 'Frequently', 'Sometimes', 'no'), labels = c(3,2,1,0))))
+obesity_data$midCAEC <- ifelse(obesity_data$CAEC == "Frequently", "Frequently or Always", 
+                               ifelse(obesity_data$CAEC =="Always", "Frequently or Always",
+                               ifelse(obesity_data$CAEC == "Sometimes", "Sometimes or no",
+                                      ifelse(obesity_data$CAEC == "no", "Sometimes or no", 1))))
+
+obesity_data$new_CAEC <- as.numeric(as.character(factor(obesity_data$midCAEC,
+                                                        levels = c("Frequently or Always", "Sometimes or no"), labels = c(1,0))))
+
+obesity_data$midCALC <- ifelse(obesity_data$CALC == "Frequently", "Frequently or Always", 
+                               ifelse(obesity_data$CALC == "Sometimes", "Sometimes or no",
+                                      ifelse(obesity_data$CALC == "no", "Sometimes or no", 1)))
 
 
-obesity_data$new_CALC<- as.numeric(as.character(factor(obesity_data$CALC,
-                                                        levels = c('Always', 'Frequently', 'Sometimes', 'no'), labels = c(3,2,1,0))))
+obesity_data$new_CALC<- as.numeric(as.character(factor(obesity_data$midCALC,
+                                                        levels = c("Frequently or Always", "Sometimes or no"), labels = c(1,0))))
+
 
 obesity_data$new_FAF<- ifelse(obesity_data$FAF == 3, "4 or 5 days",
                               ifelse(obesity_data$FAF== 2, "2 or 4 days",
                                      ifelse(obesity_data$FAF==1, "1 or 2 days",
                                             ifelse(obesity_data$FAF == 0, "Doesn't work out",1)))) 
 
-obesity_data$new_MTRANS <- as.numeric(as.character(factor(obesity_data$MTRANS,
-                                                        levels = c('Automobile', 'Motorbike', 'Public_Transportation', 'Walking', 'Bike'), labels = c(4,3,2,1,0))))
 
-obesity_data$class <- ifelse(clean$BMI >= 25 & clean$BMI < 30, "Overweight",
+
+#obesity_data$new_MTRANS <- as.numeric(as.character(factor(obesity_data$MTRANS,
+                                                        #levels = c('Automobile', 'Motorbike', 'Public_Transportation', #'Walking', 'Bike'), labels = c(4,3,2,1,0))))
+
+
+obesity_data <- obesity_data %>% mutate(BMI = Weight/(Height^2))
+obesity_data <- subset(obesity_data, select = -...18)
+clean <- na.omit(obesity_data)
+
+clean$class <- ifelse(clean$BMI >= 25 & clean$BMI < 30, "Overweight",
                               ifelse(clean$BMI >= 18.5 & clean$BMI < 25, "Healthy Weight",
                                      ifelse(clean$BMI < 18.5, "Underweight",
                                             ifelse(clean$BMI >= 30, "Obese",1))))
 
-obesity_data <- obesity_data %>% mutate(BMI = Weight/(Height^2))
-obesity_data <- subset(obesity_data, select = -...18)
 
-clean <- na.omit(obesity_data)
 
 set.seed(1)
 train <- clean[sample(1:nrow(clean), 1056, replace = F), ]
@@ -71,31 +87,14 @@ test <- clean[which(!(clean$Indicator %in% train$Indicator)),]
 #Of the 974 people who are obese, only 3 of them count their calories
 #of 300 people in a healthy weight range, 37 of them count their calories 
 #Of 556 people who are overweight, 34 of them count their calories 
-
-
-
-clean %>% filter(SCC == 'no')
-clean %>% count(clean$SCC)
-
-
 filtered_obese <- clean %>%  filter(clean$BMI >= 30)
-filtered_obese %>% count(filtered_obese$SCC == 'no')
+#filtered_obese %>% count(filtered_obese$SCC =="no")
 
 overweight <- clean %>% filter(clean$BMI >= 25 & clean$BMI < 30)
-overweight %>% count(overweight$SCC =='no')
-
-
 not_obese <- clean %>% filter(clean$BMI >= 18.5 & clean$BMI < 25)
-not_obese %>% count(not_obese$SCC =='yes')
+
 ```
 
-```{r}
-family_history <- ggplot(data = clean, 
-                         mapping = aes_(x = clean$family_history_with_overweight, fill = clean$NObeyesdad))+
-  geom_bar(position = 'stack') + coord_flip()
-
-family_history
-```
 ```{r}
 #Obesity cases when diet is taken into account
 #Filter BMI of more than 28 to ensure we are looking at obese cases
@@ -117,79 +116,6 @@ count(clean %>% filter(clean$new_FAVC=='0' & clean$CH2O >= 2 & clean$FCVC >=2))
 
 
 ```
-```{r}
-#obesity cases in relation to how much an individual works out and their caloric consumption in obese and not obese weight groups 
-ggplot(data = overweight_obese, mapping = aes_(x = overweight_obese$new_FAF, fill = overweight_obese$FAVC)) +geom_bar()
-
-ggplot(data = not_obese, mapping = aes_(x = not_obese$new_FAF, fill = not_obese$FAVC)) + geom_bar()
-
-
-#Eating between meals is a good thing 
-ggplot(data = overweight_obese, mapping = aes_(x = overweight_obese$new_FAF, fill = overweight_obese$CAEC)) +geom_bar()
-ggplot(data = not_obese, mapping = aes_(x = not_obese$new_FAF, fill = not_obese$CAEC)) + geom_bar()
-```
-```{r}
-#Impact of food, obese but workout often 
-
-count(overweight_obese %>% filter(overweight_obese$FAF >= 2))
-count(not_obese %>% filter(not_obese$FAF >= 2))
-
-count(clean %>% filter(clean$FAF >= 2))
-```
-
-
-```{r}
-
-model_1 <- lm(BMI ~ new_FAVC+ new_CAEC + new_history + FAF + Age + MTRANS , data = train)
-summary(model_1)
-
-res_model1 <- resid(model_1)
-
-#plot(train$age ~ train$serum_sodium, main = "Serum Sodium versus Age", xlab= "Age", ylab = "Serum Sodium")
-plot(train$BMI ~ fitted(model_1), main = "Response versus Fitted Values", xlab= "Fitted Values", ylab = "Platelets")
-
-plot(res_model1 ~ fitted(model_1), main = "Residuals versus Fitted Values", xlab= "Fitted Values", ylab = "Residuals")
-
-plot(res_model1 ~ train$Age, main = "Residuals versus Age", xlab= "Age", ylab = "Residuals")
-#plot(res_model1~ train$Height, main = "Residuals versus Serum Sodium", xlab= "Serum Sodium", ylab = "Residuals")
-```
-
-```{r}
-boxCox(model_1)
-
-train_select <- train %>% select(BMI,Weight, new_FAVC, new_CAEC, new_history, FAF, Age, MTRANS)
-#train_select %>% unlist(train_select$BMI, train_select$Weight)
-
-train_box <- train_select %>% mutate(BMI_box = BMI^(1/3))
-
-model_box <- lm(BMI_box ~ new_FAVC+ new_CAEC + new_history + FAF + Age + MTRANS, data = train_box)
-summary(model_box)
-
-res_box <- resid(model_box)
-plot(train_box$BMI_box ~ fitted(model_box), main = "Response versus Fitted Values", xlab= "Fitted Values", ylab = "Platelets")
-
-
-
-
-
-p <- powerTransform(cbind(unlist(train_select[,1]),unlist(train_select[,2]))~1)
-
-summary(p)
-
-train_power <- train_select %>% mutate(BMI_power = BMI^0.5, Weight_power = Weight^(1/3))
-
-model_power <- lm(BMI ~ new_FAVC+ new_CAEC + new_history + FAF + Weight_power , data = train_power)
-summary(model_power)
-
-res_power <- resid(model_power)
-plot(train_power$BMI ~ fitted(model_power), main = "Response versus Fitted Values", xlab= "Fitted Values", ylab = "Platelets")
-
-
-
-
-```
-
-
 
 # Introduction
 
@@ -203,13 +129,9 @@ Section 2 of this paper talks more about where and how the data was collected an
 
 Changes so I can upload 
 
-
-
-
-```{r}
-#You can and should cross-reference sections and sub-sections. For instance, Section \@ref(data). R Markdown automatically makes the sections lower case and adds a dash to spaces to generate labels, for instance, Section \@ref(first-discussion-point). 
-```
-
+git add.
+git commit -m "comment"
+git push 
 
 
 # Data
@@ -258,100 +180,213 @@ ggplot(data = clean, aes( x = BMI, fill = class)) + geom_histogram()
 
 ```
 
-
-
-
-
-```{r bills, fig.cap="Bills of penguins", echo = FALSE}
-
-#Our data is of penguins (Figure \@ref(fig:bills)).
-```
-
-
-
-```{r billssssss, fig.cap="More bills of penguins", echo = FALSE, fig.width=8, fig.height=4}
-
-# This needs to be about the random data tha tI sasmpled?
-
-```
-
-
-
-
-
 # Model
 
-The purpose of the model is to be able to find the most relevant predictors that can affect one's BMI. Since BMI is a numeric response variable, linear regression seemed to be the correct choice of model as opposed to a logistic regression which is more beneficial when the response variable is binary. 
-
-As stated in the data section, the new variable BMI was created for this and many of the responses were re-coded to have number values with the understanding that the higher numbers are indicative of actions that are more likely to increase one's BMI. To decide which model was best, the backwards selection method method was used with the significance level of 0.01. Along with this, research on healthy eating habits was also done to determine which predictors were most important significant to appropriately create the model. After applying the backwards selection technique on      
-
-
-
 ```{r}
-model_full <- lm(BMI ~ new_history + new_FAVC + FCVC + NCP + new_CAEC + CH2O + new_SCC + FAF + TUE + new_CALC +new_MTRANS, data = train)
-summary(model_full)
-#Drop CH2O since it had the highest p-value in the model.
+model_full <- lm(BMI ~ new_history + new_FAVC + FCVC + NCP + new_CAEC + CH2O + new_SCC + FAF + TUE + new_CALC + Age , data = train)
+#summary(model_full)
+#Drop CALC since it had the highest p-value in the model.
 
-model_noH2O <- lm(BMI ~ new_history + new_FAVC + FCVC + NCP + new_CAEC + new_SCC + FAF + TUE + new_CALC +new_MTRANS, data = train)
-summary(model_noH2O)
+model_noCALC <- lm(BMI ~ new_history + new_FAVC + FCVC + NCP + new_CAEC + CH2O + new_SCC + FAF + TUE  + Age , data = train)
+#summary(model_noCALC)
 
-#Drop NCP since it had higest P-value 
+#Drop TUE since it had highest P-value 
 
-model_noNCP <- lm(BMI ~ new_history + new_FAVC + FCVC + new_CAEC + new_SCC + FAF + TUE + new_CALC +new_MTRANS, data = train)
-summary(model_noNCP)
+model_noTUE <- lm(BMI ~ new_history + new_FAVC + FCVC + NCP + new_CAEC + CH2O + new_SCC + FAF +  Age , data = train)
+#summary(model_noTUE)
+
+#Drop SCC with p value larger than 0.01 
+
+model_final <- lm(BMI ~ new_history + new_FAVC + FCVC + NCP + new_CAEC + new_SCC + FAF +  Age, data = train)
+#summary(model_final)
+
+
+rsquared <- c(summary(model_full)$adj.r.squared, summary(model_noCALC)$adj.r.squared, summary(model_noTUE)$adj.r.squared, summary(model_final)$adj.r.squared)
+
+predictors <- c(length(coef(model_full))-1, length(coef(model_noCALC))-1, length(coef(model_noTUE))-1, length(coef(model_final))-1)
+
+cbind(predictors, rsquared)
 
 ```
+The purpose of the model is to be able to find the most relevant predictors that can affect one's BMI. Since BMI is a numeric response variable, linear regression seemed to be the correct choice of model as opposed to a logistic regression which is more beneficial when the response variable is binary. The data was randomly split into the training and test datasets with 1056 obervations in the training dataset and 1054 observations in the test. The training dataset is what we do all of our testing and build our models with while the test dataset serves as a method for us to validate our model. If the results based off our training and test datasets are similar, our model is validated.  
 
+As stated in the data section, the new variable BMI was created for this and many of the responses were re-coded to have number values with the understanding that the higher numbers are indicative of actions that are more likely to increase one's BMI. One thing to note is that the method of transportation was excluded from this model as it is difficult to quantify the different methods of transportation and decide which is best for each person. This is highly subjective and can be different for everyone.   
 
-```{r}
-model_1 <- lm(BMI ~ new_FAVC+ new_CAEC + new_history + FAF + Age + MTRANS , data = train)
-summary(model_1)
+To decide which model was best, the backwards selection method method was used with the significance level of 0.01. This means that any predictor with a p-value higher than the significance level of 0.01 was taken out of the model. Each predictor was removed one at a time and this process was repeated until the remaining predictors in the model had a p-value less than the threshold of 0.01.Along with this, research on healthy eating habits was also done to determine which predictors were most important significant to appropriately create the model. Table 1 looks at the different models, the number of predictors each model has and also the adjusted r squared of all these models. The reason we want to look at adjusted r squared is because we can compare how well our model fits with models consisting of a different number of predictors. From this, we can see that that model 4 as it has the least predictors making it easier to interpret compared to the other models. Along with its simplicity, the margins between the adjusted r squared of that model compared to model 1 (the model with all predictors) is small. This model was made of the the following predictors:
 
-res_model1 <- resid(model_1)
+* Family history with Obesity (Yes/No)
+* Frequent consumption of High Caloric Food (Yes/No)
+* Frequent consumption of vegetables (Always/Sometimes/Never) 
+* Consumption of food between meals (Frequent or Always / Sometimes or No)
+* Calorie Consumption Monitoring (Yes/No)
+* Frequency of physical activity (4-5 days/ 2-4 days/ 1-2 days/ Never)
+* Age (numerical)
 
-#plot(train$age ~ train$serum_sodium, main = "Serum Sodium versus Age", xlab= "Age", ylab = "Serum Sodium")
-plot(train$BMI ~ fitted(model_1), main = "Response versus Fitted Values", xlab= "Fitted Values", ylab = "Platelets")
-
-plot(res_model1 ~ fitted(model_1), main = "Residuals versus Fitted Values", xlab= "Fitted Values", ylab = "Residuals")
-
-plot(res_model1 ~ train$Age, main = "Residuals versus Age", xlab= "Age", ylab = "Residuals")
-#plot(res_model1~ train$Height, main = "Residuals versus Serum Sodium", xlab= "Serum Sodium", ylab = "Residuals")
-```
-
-```{r}
-boxCox(model_1)
-
-train_select <- train %>% select(BMI,Weight, new_FAVC, new_CAEC, new_history, FAF, Age, MTRANS)
-#train_select %>% unlist(train_select$BMI, train_select$Weight)
-
-train_box <- train_select %>% mutate(BMI_box = BMI^(1/3))
-
-model_box <- lm(BMI_box ~ new_FAVC+ new_CAEC + new_history + FAF + Age + MTRANS, data = train_box)
-summary(model_box)
-
-res_box <- resid(model_box)
-plot(train_box$BMI_box ~ fitted(model_box), main = "Response versus Fitted Values", xlab= "Fitted Values", ylab = "Platelets")
-
-
-
-
-
-p <- powerTransform(cbind(unlist(train_select[,1]),unlist(train_select[,2]))~1)
-
-summary(p)
-
-train_power <- train_select %>% mutate(BMI_power = BMI^0.5, Weight_power = Weight^(1/3))
-
-model_power <- lm(BMI ~ new_FAVC+ new_CAEC + new_history + FAF + Weight_power , data = train_power)
-summary(model_power)
-
-res_power <- resid(model_power)
-plot(train_power$BMI ~ fitted(model_power), main = "Response versus Fitted Values", xlab= "Fitted Values", ylab = "Platelets")
-
-```
-
+This also means that assumptions for linear regression were also checked as this is a vital step so that we can make inferences off the results of our model. We aren't able to check for multi-collinearity since the model that we use only have one numerical variable (Age). The results of the model will be presented in the next section of this report. This section will also present various tables and graphs which helped show which predictors were relevant in making this model. 
 
 # Results
+
+Table _ looks takes a look at the individuals who count their calories. We notice that between both the overweight and healthy weight groups, only 2% of people keep track of their calories whereas, in the healthy population, about 12% of the population monitors their calories. when looking specifically at the obese population, of the 971, only 3 of them track their calories.  
+
+```{r}
+#Are people who track their calories more likely to be normal weight than people who dont?
+#Look at of the amount of people who don't track their calories, how many are obese according to BMI. 
+#Of the 974 people who are obese, only 3 of them count their calories
+#of 300 people in a healthy weight range, 37 of them count their calories 
+#Of 556 people who are overweight, 34 of them count their calories 
+
+
+
+
+
+filtered_obese <- clean %>%  filter(clean$BMI >= 30)
+#filtered_obese %>% count(filtered_obese$SCC == 'no')
+
+#overweight <- clean %>% filter(clean$BMI >= 25 & clean$BMI < 30)
+#overweight %>% count(overweight$SCC =='no')
+
+
+#overweight_obese %>% count(overweight_obese$SCC =='no')
+
+not_obese <- clean %>% filter(clean$BMI >= 18.5 & clean$BMI < 25)
+#not_obese %>% count(not_obese$SCC =='no')
+
+Obese_or_Overweight <- c(37, 1503,1540)
+Healthy_Weight <- c(37,262,299)
+
+
+monitor_table <- data.frame(Obese_or_Overweight, Healthy_Weight)
+rownames(monitor_table) <- c("Yes", "No", "Total")
+colnames(monitor_table) <- c("Obese or Overweight", "Healthy Weight")
+
+
+monitor_table <- knitr::kable(monitor_table, caption = "Monitoring of Calories for Obese and Overweight vs Healthy Weight individuals") %>% kable_styling(latex_options = "HOLD_position")
+
+monitor_table
+
+
+```
+
+When considering calories, one must also consider the diet of these individuals. Table _ looks at specific diet choices both groups of people make. It shows that 515 people who are either obese or overweight have a high consumption of calories and drink less than 2L of water. 492 of them consumes high calories and either sometimes or never eat vegetables. On the contrary, these statistics are 71 and 133 for those who are have a healthy weight.     
+
+```{r}
+family_history <- ggplot(data = clean, 
+                         mapping = aes_(x = clean$family_history_with_overweight, fill = clean$class))+
+  geom_bar(position = 'stack') + coord_flip()
+
+#family_history
+```
+
+
+```{r}
+#Obesity cases when diet is taken into account
+#Filter BMI of more than 28 to ensure we are looking at obese cases
+
+overweight_obese <- clean %>% filter(BMI > 25) 
+
+#count(overweight_obese %>% filter(overweight_obese$new_FAVC == '1' & overweight_obese$CH2O < 2))
+#count(not_obese %>% filter(not_obese$new_FAVC == '1' & not_obese$CH2O < 2))
+
+
+#count(overweight_obese %>% filter(overweight_obese$new_FAVC == '1' & overweight_obese$FCVC <= 2))
+#count(not_obese %>% filter(not_obese$new_FAVC == '1' & not_obese$FCVC <= 2))
+
+Obese_or_Overweight <- c(515, 492)
+Healthy_Weight <- c(71,133)
+
+
+diet_table <- data.frame(Obese_or_Overweight, Healthy_Weight)
+rownames(diet_table) <- c("High Consumption of Calories and drinking less than 2L of water","High Consumption of Calories and Sometimes/Never having Vegetables")
+colnames(diet_table) <- c("Obese or Overweight", "Healthy Weight")
+
+diet_table <- knitr::kable(diet_table, caption = "Diet choices for Overweight and OBese versus Healthy Weight individuals") %>% kable_styling(latex_options = "HOLD_position")
+
+diet_table
+
+#397 of them are on the higher end of overweight and or obese compared to only 71 people with the same eating habits being normal weight. 
+
+
+
+```
+
+
+```{r}
+#obesity cases in relation to how much an individual works out and their caloric consumption in obese and not obese weight groups 
+ggplot(data = overweight_obese, mapping = aes_(x = overweight_obese$new_FAF, fill = overweight_obese$FAVC)) +geom_bar()
+
+ggplot(data = not_obese, mapping = aes_(x = not_obese$new_FAF, fill = not_obese$FAVC)) + geom_bar()
+
+
+#Eating between meals is a good thing 
+ggplot(data = overweight_obese, mapping = aes_(x = overweight_obese$new_FAF, fill = overweight_obese$CAEC)) +geom_bar()
+ggplot(data = not_obese, mapping = aes_(x = not_obese$new_FAF, fill = not_obese$CAEC)) + geom_bar()
+```
+
+
+
+
+
+
+
+
+From Figure _, the true relationship between BMI and the fitted values of the model seem to be linear while the residual plots show randomness which is ideal. This means that the uncorrelated errors and constant variance assumption is also satisfied. One thing to note is that the residual plot for the Age variable is also skewed right, something that we noticed when visualizing our data. Finally, since a majority of the points align very closely with the line, the normality distribution is also satisfied.      
+
+```{r}
+
+model_final <- lm(BMI ~ new_history + new_FAVC + FCVC + new_CAEC + new_SCC + FAF + Age, data = train)
+summary(model_final)
+
+
+#Checking Assumptions
+
+res_final <- resid(model_final)
+
+#plot(train$age ~ train$serum_sodium, main = "Serum Sodium versus Age", xlab= "Age", ylab = "Serum Sodium")
+
+#Checking condition 1 
+plot(train$BMI ~ fitted(model_final), main = "Response versus Fitted Values", xlab= "Fitted Values", ylab = "Platelets") + abline(lm(train$BMI ~ fitted(model_final)), col = "red")
+
+#Checking residual plots 
+plot(res_final ~ fitted(model_final), main = "Residuals versus Fitted Values", xlab= "Fitted Values", ylab = "Residuals")
+plot(res_final ~ train$Age, main = "Residuals versus Age", xlab= "Age", ylab = "Residuals")
+
+#Checking normality assumption 
+qqnorm(res_final)
+qqline(res_final)
+
+```
+A boxcox transformation was also applied to this model in hopes of finding a model with a better fit however, the differences in results were minimal so the original model will be used so that it can be interpreted and understood clearly.
+The fitted values versus BMI plot and residual plots remained similar to the untransformed model in shape. However, the QQ plot for this model is worse as less of the points are on the line.   
+```{r}
+boxCox(model_final)
+
+train_modbox <- train %>% mutate(BMI = BMI^(0.5))
+  
+model_box <- lm(BMI ~ new_history + new_FAVC + FCVC + new_CAEC + new_SCC + FAF + Age, data = train_modbox)
+summary(model_box)
+res_modbox <- resid(model_box)
+
+
+plot(train_modbox$BMI ~ fitted(model_box), main = "Response versus Fitted Values", xlab= "Fitted Values", ylab = "Platelets") + abline(lm(train_modbox$BMI ~ fitted(model_box)), col = "red")
+
+plot(res_modbox ~ fitted(model_box), main = "Residuals versus Fitted Values", xlab= "Fitted Values", ylab = "Residuals")
+plot(res_modbox ~ train$Age, main = "Residuals versus Age", xlab= "Age", ylab = "Residuals")
+
+qqnorm(res_modbox)
+qqline(res_modbox)
+
+
+```
+
+The final step was validating the model by doing the exact same steps with the test dataset. When comparing the same model with both the training and test dataset, we notice that both have similar model statistics. Table 2 compares key statistics for both models and due to the similarities between both these models, we are able to validate our model.  
+
+
+```{r}
+model_test <- lm(BMI ~ new_history + new_FAVC + FCVC + new_CAEC + new_SCC + FAF + Age, data = test)
+#summary(model_test)
+#summary(model_final)
+
+```
 
 # Discussion
 
