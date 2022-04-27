@@ -9,6 +9,6 @@ https://archive.ics.uci.edu/ml/datasets/Estimation+of+obesity+levels+based+on+ea
 
 This also contains the datasheet pdf and rmd.
 
-Finally, the script folder gives instructions to load in the data into R. (only after raw data has already been installed)
+Finally, the script folder gives instructions to load in the data into R.(only after raw data has already been installed) This data also has relevant code for data cleaning, modificaiton and also creation of datasets that were used to differentiate between different weight classes. 
 
 This repository explores the most significant factors that affect the weight levels in individuals. I was able to learn many new things such as the importance of eating between meals and also how a family history with obesity plays a significant role in how it affects individuals. 

@@ -55,10 +55,6 @@ obesity_data$new_CALC<- as.numeric(as.character(factor(obesity_data$midCALC,
                                                         levels = c("Frequently or Always", "Sometimes or no"), labels = c(1,0))))
 
 
-#obesity_data$new_MTRANS <- as.numeric(as.character(factor(obesity_data$MTRANS,
-                                                        #levels = c('Automobile', 'Motorbike', 'Public_Transportation', #'Walking', 'Bike'), labels = c(4,3,2,1,0))))
-
-
 obesity_data <- obesity_data %>% mutate(BMI = Weight/(Height^2))
 obesity_data <- subset(obesity_data, select = -...18)
 
@@ -78,6 +74,12 @@ binding_column$new_FAF<- ifelse(binding_column$rounded_FAF == 3, "4 or 5 days",
 
 
 clean <- na.omit(binding_column)
+clean <- subset(clean, select = -Gender)
+clean <- subset(clean, select = -MTRANS)
+clean <- subset(clean, select = -Height)
+clean <- subset(clean, select = -Weight)
+
+
 overweight <- clean %>% filter(clean$BMI >= 25 & clean$BMI < 30)
 not_obese <- clean %>% filter(clean$BMI >= 18.5 & clean$BMI < 25)
 overweight_obese <- clean %>% filter(BMI > 25) 
@@ -87,6 +89,10 @@ set.seed(1)
 train <- clean[sample(1:nrow(clean), 1056, replace = F), ]
 test <- clean[which(!(clean$Indicator %in% train$Indicator)),]
 
+```
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.pos = 'H')
 ```
 
 ```{r}
@@ -100,8 +106,7 @@ Obesity is defined as the "abnormal or excessive fat accumulation that presents 
 In this report, from data collected from individuals living in Peru, Mexico and Columbia, I plan to examine various factors and determine their significance in a person being overweight or obese. I start out my data section by creating a number of graphs and studying a lot of the variables from the data set. From this, I am able to identify the most significant variables that play a role in an individual having a higher weight. To be precise, this is because from the formula of BMI, a higher weight would indicate a higher BMI and thus resulting in someone being overweight or obese. With the variables that are most significant, I construct a linear model. With the benchmarks set by the BMI, this model could be used in determining what factors and the severity of those factors play a role in someone being overweight or obese.   
 
 
-Section 2 of this paper talks more about where and how the data was collected and if any modifications were made to this data set for the purpose of this study. This includes the construction of new variables such as "BMI" and removal of other variables. In section 3 of this paper, we will make a linear model with the predictors we choose to be relevant and show the results of us testing for the assumptions in section 4 of this paper. Section 4 also presents many graphs to justify the choices of the predictors that were chosen. 
-Section 5 is the discussion section where we talk about possible biases and ethical concerns in the dataset and model. We also mention how problems with the dataset transfer over to the model and some next steps we can take to improve the validity and accuaracy for our model as well.   
+Section 2 of this paper talks more about where and how the data was collected and if any modifications were made to this data set for the purpose of this study. This includes the construction of new variables such as "BMI" and removal of other variables. In section 3 of this paper, we will make a linear model with the predictors we choose to be relevant and show the results of us testing for the assumptions in section 4 of this paper. Section 4 also presents many graphs to justify the choices of the predictors that were chosen. Section 5 is the discussion section where we talk about possible biases and ethical concerns in the dataset and model. We also mention how problems with the dataset transfer over to the model and some next steps we can take to improve the validity and accuaracy for our model as well.   
 
 # Data
 
@@ -208,7 +213,7 @@ The purpose of the model is to be able to find the most relevant predictors that
 
 As stated in the data section, the new variable BMI was created for this and many of the responses were re-coded to have number values with the understanding that the higher numbers are indicative of actions that are more likely to increase one's BMI. One thing to note is that the method of transportation was excluded from this model as it is difficult to quantify the different methods of transportation and decide which is best for each person. This is highly subjective and can be different for everyone.   
 
-To decide which model was best, the backwards selection method method was used with the significance level of 0.01. This means that any predictor with a p-value higher than the significance level of 0.01 was taken out of the model. Each predictor was removed one at a time and this process was repeated until the remaining predictors in the model had a p-value less than the threshold of 0.01.Along with this, research on healthy eating habits was also done to determine which predictors were most important significant to appropriately create the model. Table 1 looks at the different models, the number of predictors each model has and also the adjusted r squared of all these models. The reason we want to look at adjusted r squared is because we can compare how well our model fits with models consisting of a different number of predictors. From this, we can see that that model 4 as it has the least predictors making it easier to interpret compared to the other models. Along with its simplicity, the margins between the adjusted r squared of that model compared to model 1 (the model with all predictors) is small. This model was made of the the following predictors:
+To decide which model was best, the backwards selection method method was used with the significance level of 0.01. This means that any predictor with a p-value higher than the significance level of 0.01 was taken out of the model. Each predictor was removed one at a time and this process was repeated until the remaining predictors in the model had a p-value less than the threshold of 0.01.Along with this, research on healthy eating habits was also done to determine which predictors were most important significant to appropriately create the model. Table 1 looks at the different models, the number of predictors each model has and also the adjusted r squared of all these models. R squared is interpreted as how fell the data is fit to the regression line. The reason we want to look at adjusted r squared is because we can compare how well our model fits with models consisting of a different number of predictors. From this, we can see that that model final as it has the least predictors making it easier to interpret compared to the other models. Along with its simplicity, the margins between the adjusted r squared of that model compared to model 1 (the model with all predictors) is small. This model was made of the the following predictors:
 
 * Family history with Obesity (Yes/No)
 * Frequent consumption of High Caloric Food (Yes/No)
@@ -339,25 +344,19 @@ family_history
 
 ## Model Assumptions and Validation 
 
-From Figure _, the true relationship between BMI and the fitted values of the model seem to be linear while the residual plots show randomness which is ideal. This means that the uncorrelated errors and constant variance assumption is also satisfied. One thing to note is that the residual plot for the Age variable is also skewed right, something that we noticed when visualizing our data. Finally, since a majority of the points align very closely with the line, the normality distribution is also satisfied.      
+From Figure 5, the true relationship between BMI and the fitted values of the model seem to be linear while the residual plots show randomness which is ideal. This means that the uncorrelated errors and constant variance assumption is also satisfied. One thing to note is that the residual plot for the Age variable is also skewed right, something that we noticed when visualizing our data. Finally, since a majority of the points align very closely with the line, the normality distribution is also satisfied.      
 
-```{r, fig.cap= "Response vs Fitted Values", fig.height= 3}
+```{r, fig.cap= "Response vs Fitted Values", fig.height= 3, message= FALSE}
 
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 
 model_final <- lm(BMI ~ new_history + new_FAVC + FCVC + new_CAEC + new_SCC + FAF + Age, data = train)
 #summary(model_final)
-
-
-
 #Checking Assumptions
-
 res_final <- resid(model_final)
-
-
-
 #Checking condition 1 
-plot(train$BMI ~ fitted(model_final), xlab= "Fitted Values", ylab = "BMI") + abline(lm(train$BMI ~ fitted(model_final)), col = "red") 
+plot(train$BMI ~ fitted(model_final), xlab= "Fitted Values", ylab = "BMI") 
+
 ```
 
 
@@ -376,6 +375,8 @@ res_plot2<- plot(res_final ~ train$Age, xlab= "Age", ylab = "Residuals")
 normal_plot <- qqnorm(res_final)
 normal_line <- qqline(res_final)
 ```
+
+
 A boxcox transformation was also applied to this model in hopes of finding a model with a better fit however, the differences in results were minimal so the original model will be used so that it can be interpreted and understood clearly.
 The fitted values versus BMI plot and residual plots remained similar to the untransformed model in shape. However, the QQ plot for this model is worse as less of the points are on the line. The graphical results for the transformed model can be found in the appendix of this paper.  
 
@@ -466,19 +467,30 @@ The many weaknesses in the model are apparent in the R squared value of this mod
 
 ```{r}
 boxCox(model_final)
-
 train_modbox <- train %>% mutate(BMI = BMI^(0.5))
   
 model_box <- lm(BMI ~ new_history + new_FAVC + FCVC + new_CAEC + new_SCC + FAF + Age, data = train_modbox)
 summary(model_box)
 res_modbox <- resid(model_box)
+```
 
 
+```{r, fig.cap= "Response vs Fitted Values of Transformed Model"}
 plot(train_modbox$BMI ~ fitted(model_box), main = "Response versus Fitted Values", xlab= "Fitted Values", ylab = "Platelets") + abline(lm(train_modbox$BMI ~ fitted(model_box)), col = "red")
+```
 
+
+```{r, fig.cap= "Residuals vs Fitted Values to check for uncorrelated errors and constant variance assumption in the transformed model"}
 plot(res_modbox ~ fitted(model_box), main = "Residuals versus Fitted Values", xlab= "Fitted Values", ylab = "Residuals")
-plot(res_modbox ~ train$Age, main = "Residuals versus Age", xlab= "Age", ylab = "Residuals")
+```
 
+
+```{r, fig.cap= "Residuals vs Age to check for uncorrelated errors and constant variance assumption in the transformed model"}
+plot(res_modbox ~ train$Age, main = "Residuals versus Age", xlab= "Age", ylab = "Residuals")
+```
+
+
+```{r, fig.cap= "QQplot to check the normality assumption of the transformed model" }
 qqnorm(res_modbox)
 qqline(res_modbox)
 
